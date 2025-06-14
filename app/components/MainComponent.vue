@@ -50,12 +50,14 @@
     </AuthState>
 
     <!-- Team Selector for organization scope -->
-    <TeamSelector
-      v-show="config.public.scope === 'organization' && !apiError && !signInRequired"
-      :show="config.public.scope === 'organization' && !apiError && !signInRequired"
-      :current-team="selectedTeamSlug"
-      @team-selected="onTeamSelected"
-    />
+    <ClientOnly>
+      <TeamSelector
+        v-show="config.public.scope === 'organization' && !apiError && !signInRequired"
+        :show="config.public.scope === 'organization' && !apiError && !signInRequired"
+        :current-team="selectedTeamSlug"
+        @team-selected="onTeamSelected"
+      />
+    </ClientOnly>
 
     <div v-show="!apiError">
       <v-progress-linear v-show="!metricsReady" indeterminate color="indigo" />
@@ -119,38 +121,60 @@ export default defineNuxtComponent({
       await this.fetchMetricsForTeam(teamSlug);
     },
     async fetchMetricsForTeam(teamSlug: string | null) {
-      try {
-        this.metricsReady = false;
-        this.apiError = undefined;
+      this.metricsReady = false;
+      this.apiError = undefined;
 
-        const url = teamSlug ? `/api/metrics?team=${teamSlug}` : '/api/metrics';
-        const { data: metricsData, error: metricsError } = await $fetch(url);
+      const url = teamSlug ? `/api/metrics?team=${teamSlug}` : '/api/metrics';
+      const metricsFetch = useFetch(url);
+      
+      const { data: metricsData, error: metricsError } = await metricsFetch;
+      
+      if (metricsError.value || !metricsData.value) {
+        this.processErrorMethod(metricsError.value as H3Error);
+      } else {
+        const apiResponse = metricsData.value as MetricsApiResponse;
+        this.metrics = apiResponse.metrics || [];
+        this.originalMetrics = apiResponse.usage || [];
+        this.metricsReady = true;
+      }
 
-        if (metricsError || !metricsData) {
-          this.processError(metricsError as H3Error);
-        } else {
-          const apiResponse = metricsData as MetricsApiResponse;
-          this.metrics = apiResponse.metrics || [];
-          this.originalMetrics = apiResponse.usage || [];
-          this.metricsReady = true;
-        }
+      // Update display name
+      const config = useRuntimeConfig();
+      const displayInfo = {
+        githubOrg: config.public.githubOrg,
+        githubEnt: config.public.githubEnt,
+        githubTeam: teamSlug || '',
+        scope: config.public.scope
+      };
+      this.displayName = getDisplayName(displayInfo);
 
-        // Update display name
+      if (teamSlug && this.metrics.length === 0 && !this.apiError) {
+        this.apiError = 'No data returned from API - check if the team exists and has any activity and at least 5 active members';
+      }
+    },
+    processErrorMethod(error: H3Error) {
+      console.error(error || 'No data returned from API');
+      // Check the status code of the error response
+      if (error?.statusCode) {
         const config = useRuntimeConfig();
-        const displayInfo = {
-          githubOrg: config.public.githubOrg,
-          githubEnt: config.public.githubEnt,
-          githubTeam: teamSlug || '',
-          scope: config.public.scope
-        };
-        this.displayName = getDisplayName(displayInfo);
-
-        if (teamSlug && this.metrics.length === 0 && !this.apiError) {
-          this.apiError = 'No data returned from API - check if the team exists and has any activity and at least 5 active members';
+        switch (error.statusCode) {
+          case 401:
+            this.apiError = '401 Unauthorized access returned by GitHub API - check if your token in the .env (for local runs). Check PAT token and GitHub permissions.';
+            break;
+          case 404:
+            this.apiError = `404 Not Found - is the ${config.public.scope || ''} org:"${config.public.githubOrg || ''}" ent:"${config.public.githubEnt || ''}" team:"${config.public.githubTeam}" correct? ${error.message}`;
+            break;
+          case 422:
+            this.apiError = `422 Unprocessable Entity - Is the Copilot Metrics API enabled for the Org/Ent? ${error.message}`;
+            break;
+          case 500:
+            this.apiError = `500 Internal Server Error - most likely a bug in the app. Error: ${error.message}`;
+            break;
+          default:
+            this.apiError = `${error.statusCode} Error: ${error.message}`;
         }
-      } catch (error) {
-        console.error('Error fetching team metrics:', error);
-        this.apiError = 'Failed to fetch team metrics';
+      } else {
+        this.apiError = 'No data returned from API';
       }
     }
   },

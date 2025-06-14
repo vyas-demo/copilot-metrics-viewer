@@ -17,6 +17,7 @@
           density="compact"
           style="min-width: 200px;"
           clearable
+          no-data-text="No teams available"
           @update:model-value="onTeamSelected"
         >
           <template #no-data>
