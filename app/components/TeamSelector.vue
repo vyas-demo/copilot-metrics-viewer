@@ -12,7 +12,7 @@
           :disabled="loading || teams.length === 0"
           label="Choose a team"
           item-title="name"
-          item-value="slug"
+          item-value="value"
           variant="outlined"
           density="compact"
           style="min-width: 200px;"
