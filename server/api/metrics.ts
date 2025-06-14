@@ -14,10 +14,24 @@ export default defineEventHandler(async (event) => {
     const config = useRuntimeConfig(event);
     let apiUrl = '';
     let mockedDataPath: string;
+    
+    // Check for team query parameter to override team selection
+    const query = getQuery(event);
+    const teamSlug = query.team as string;
 
-    switch (event.context.scope) {
+    // Determine the effective scope and team
+    let effectiveScope = event.context.scope;
+    let effectiveTeam = event.context.team;
+    
+    // If team query parameter is provided and we're in org scope, switch to team mode
+    if (teamSlug && event.context.scope === 'org') {
+        effectiveScope = 'team';
+        effectiveTeam = teamSlug;
+    }
+
+    switch (effectiveScope) {
         case 'team':
-            apiUrl = `https://api.github.com/orgs/${event.context.org}/team/${event.context.team}/copilot/metrics`;
+            apiUrl = `https://api.github.com/orgs/${event.context.org}/team/${effectiveTeam}/copilot/metrics`;
             // no team test data available, using org data
             // '../../app/mock-data/organization_metrics_response_sample.json'
             mockedDataPath = resolve('public/mock-data/organization_metrics_response_sample.json');

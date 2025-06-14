@@ -1,0 +1,67 @@
+[
+  {
+    "id": 1,
+    "node_id": "MDQ6VGVhbTE=",
+    "url": "https://api.github.com/teams/1",
+    "html_url": "https://github.com/orgs/github/teams/justice-league",
+    "name": "Justice League",
+    "slug": "justice-league",
+    "description": "A great team.",
+    "privacy": "closed",
+    "permission": "admin",
+    "members_url": "https://api.github.com/teams/1/members{/member}",
+    "repositories_url": "https://api.github.com/teams/1/repos"
+  },
+  {
+    "id": 2,
+    "node_id": "MDQ6VGVhbTI=",
+    "url": "https://api.github.com/teams/2",
+    "html_url": "https://github.com/orgs/github/teams/frontend-team",
+    "name": "Frontend Team",
+    "slug": "frontend-team",
+    "description": "Frontend development team.",
+    "privacy": "closed",
+    "permission": "push",
+    "members_url": "https://api.github.com/teams/2/members{/member}",
+    "repositories_url": "https://api.github.com/teams/2/repos"
+  },
+  {
+    "id": 3,
+    "node_id": "MDQ6VGVhbTM=",
+    "url": "https://api.github.com/teams/3",
+    "html_url": "https://github.com/orgs/github/teams/backend-team",
+    "name": "Backend Team",
+    "slug": "backend-team",
+    "description": "Backend development team.",
+    "privacy": "closed",
+    "permission": "push",
+    "members_url": "https://api.github.com/teams/3/members{/member}",
+    "repositories_url": "https://api.github.com/teams/3/repos"
+  },
+  {
+    "id": 4,
+    "node_id": "MDQ6VGVhbTQ=",
+    "url": "https://api.github.com/teams/4",
+    "html_url": "https://github.com/orgs/github/teams/devops-team",
+    "name": "DevOps Team",
+    "slug": "devops-team",
+    "description": "DevOps and infrastructure team.",
+    "privacy": "closed",
+    "permission": "push",
+    "members_url": "https://api.github.com/teams/4/members{/member}",
+    "repositories_url": "https://api.github.com/teams/4/repos"
+  },
+  {
+    "id": 5,
+    "node_id": "MDQ6VGVhbTU=",
+    "url": "https://api.github.com/teams/5",
+    "html_url": "https://github.com/orgs/github/teams/qa-team",
+    "name": "QA Team",
+    "slug": "qa-team",
+    "description": "Quality assurance team.",
+    "privacy": "closed",
+    "permission": "pull",
+    "members_url": "https://api.github.com/teams/5/members{/member}",
+    "repositories_url": "https://api.github.com/teams/5/repos"
+  }
+]

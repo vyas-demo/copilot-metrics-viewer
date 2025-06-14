@@ -49,6 +49,13 @@
       </template>
     </AuthState>
 
+    <!-- Team Selector for organization scope -->
+    <TeamSelector
+      v-show="config.public.scope === 'organization' && !apiError && !signInRequired"
+      :show="config.public.scope === 'organization' && !apiError && !signInRequired"
+      :current-team="selectedTeamSlug"
+      @team-selected="onTeamSelected"
+    />
 
     <div v-show="!apiError">
       <v-progress-linear v-show="!metricsReady" indeterminate color="indigo" />
@@ -87,6 +94,7 @@ import BreakdownComponent from './BreakdownComponent.vue'
 import CopilotChatViewer from './CopilotChatViewer.vue'
 import SeatsAnalysisViewer from './SeatsAnalysisViewer.vue'
 import ApiResponse from './ApiResponse.vue'
+import TeamSelector from './TeamSelector.vue'
 
 export default defineNuxtComponent({
   name: 'MainComponent',
@@ -95,7 +103,8 @@ export default defineNuxtComponent({
     BreakdownComponent,
     CopilotChatViewer,
     SeatsAnalysisViewer,
-    ApiResponse
+    ApiResponse,
+    TeamSelector
   },
   methods: {
     logout() {
@@ -104,13 +113,53 @@ export default defineNuxtComponent({
       this.seats = [];
       // console.log('metrics are now', this.metrics);
       clear();
+    },
+    async onTeamSelected(teamSlug: string | null) {
+      this.selectedTeamSlug = teamSlug;
+      await this.fetchMetricsForTeam(teamSlug);
+    },
+    async fetchMetricsForTeam(teamSlug: string | null) {
+      try {
+        this.metricsReady = false;
+        this.apiError = undefined;
+
+        const url = teamSlug ? `/api/metrics?team=${teamSlug}` : '/api/metrics';
+        const { data: metricsData, error: metricsError } = await $fetch(url);
+
+        if (metricsError || !metricsData) {
+          this.processError(metricsError as H3Error);
+        } else {
+          const apiResponse = metricsData as MetricsApiResponse;
+          this.metrics = apiResponse.metrics || [];
+          this.originalMetrics = apiResponse.usage || [];
+          this.metricsReady = true;
+        }
+
+        // Update display name
+        const config = useRuntimeConfig();
+        const displayInfo = {
+          githubOrg: config.public.githubOrg,
+          githubEnt: config.public.githubEnt,
+          githubTeam: teamSlug || '',
+          scope: config.public.scope
+        };
+        this.displayName = getDisplayName(displayInfo);
+
+        if (teamSlug && this.metrics.length === 0 && !this.apiError) {
+          this.apiError = 'No data returned from API - check if the team exists and has any activity and at least 5 active members';
+        }
+      } catch (error) {
+        console.error('Error fetching team metrics:', error);
+        this.apiError = 'Failed to fetch team metrics';
+      }
     }
   },
 
   data() {
     return {
       tabItems: ['languages', 'editors', 'copilot chat', 'seat analysis', 'api response'],
-      tab: null
+      tab: null,
+      selectedTeamSlug: null as string | null
     }
   },
   created() {
@@ -202,7 +251,8 @@ export default defineNuxtComponent({
       mockedDataMessage,
       itemName,
       displayName,
-      user
+      user,
+      processError
     };
   },
 })
