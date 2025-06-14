@@ -124,32 +124,29 @@ export default defineNuxtComponent({
       this.metricsReady = false;
       this.apiError = undefined;
 
-      const url = teamSlug ? `/api/metrics?team=${teamSlug}` : '/api/metrics';
-      const metricsFetch = useFetch(url);
-      
-      const { data: metricsData, error: metricsError } = await metricsFetch;
-      
-      if (metricsError.value || !metricsData.value) {
-        this.processErrorMethod(metricsError.value as H3Error);
-      } else {
-        const apiResponse = metricsData.value as MetricsApiResponse;
+      try {
+        const url = teamSlug ? `/api/metrics?team=${teamSlug}` : '/api/metrics';
+        const apiResponse = await $fetch(url) as MetricsApiResponse;
+        
         this.metrics = apiResponse.metrics || [];
         this.originalMetrics = apiResponse.usage || [];
         this.metricsReady = true;
-      }
 
-      // Update display name
-      const config = useRuntimeConfig();
-      const displayInfo = {
-        githubOrg: config.public.githubOrg,
-        githubEnt: config.public.githubEnt,
-        githubTeam: teamSlug || '',
-        scope: config.public.scope
-      };
-      this.displayName = getDisplayName(displayInfo);
+        // Update display name
+        const config = useRuntimeConfig();
+        const displayInfo = {
+          githubOrg: config.public.githubOrg,
+          githubEnt: config.public.githubEnt,
+          githubTeam: teamSlug || '',
+          scope: config.public.scope
+        };
+        this.displayName = getDisplayName(displayInfo);
 
-      if (teamSlug && this.metrics.length === 0 && !this.apiError) {
-        this.apiError = 'No data returned from API - check if the team exists and has any activity and at least 5 active members';
+        if (teamSlug && this.metrics.length === 0 && !this.apiError) {
+          this.apiError = 'No data returned from API - check if the team exists and has any activity and at least 5 active members';
+        }
+      } catch (error) {
+        this.processErrorMethod(error as H3Error);
       }
     },
     processErrorMethod(error: H3Error) {
@@ -196,7 +193,7 @@ export default defineNuxtComponent({
     const mockedDataMessage = computed(() => config.public.isDataMocked ? 'Using mock data - see README if unintended' : '');
     const itemName = computed(() => config.public.scope);
     const githubInfo = getDisplayName(config.public)
-    const displayName = computed(() => githubInfo);
+    const displayName = ref(githubInfo);
 
     const metricsReady = ref(false);
     const metrics = ref<Metrics[]>([]);
