@@ -128,6 +128,7 @@ export default defineNuxtComponent({
         const url = teamSlug ? `/api/metrics?team=${teamSlug}` : '/api/metrics';
         const apiResponse = await $fetch(url) as MetricsApiResponse;
         
+        // Update reactive refs directly
         this.metrics = apiResponse.metrics || [];
         this.originalMetrics = apiResponse.usage || [];
         this.metricsReady = true;
@@ -142,37 +143,17 @@ export default defineNuxtComponent({
         };
         this.displayName = getDisplayName(displayInfo);
 
+        // Show a more graceful message for teams with no data
         if (teamSlug && this.metrics.length === 0 && !this.apiError) {
-          this.apiError = 'No data returned from API - check if the team exists and has any activity and at least 5 active members';
+          this.apiError = 'No metrics data available for this team. This may occur if the team has fewer than 5 active members or no recent activity.';
         }
       } catch (error) {
         this.processErrorMethod(error as H3Error);
       }
     },
     processErrorMethod(error: H3Error) {
-      console.error(error || 'No data returned from API');
-      // Check the status code of the error response
-      if (error?.statusCode) {
-        const config = useRuntimeConfig();
-        switch (error.statusCode) {
-          case 401:
-            this.apiError = '401 Unauthorized access returned by GitHub API - check if your token in the .env (for local runs). Check PAT token and GitHub permissions.';
-            break;
-          case 404:
-            this.apiError = `404 Not Found - is the ${config.public.scope || ''} org:"${config.public.githubOrg || ''}" ent:"${config.public.githubEnt || ''}" team:"${config.public.githubTeam}" correct? ${error.message}`;
-            break;
-          case 422:
-            this.apiError = `422 Unprocessable Entity - Is the Copilot Metrics API enabled for the Org/Ent? ${error.message}`;
-            break;
-          case 500:
-            this.apiError = `500 Internal Server Error - most likely a bug in the app. Error: ${error.message}`;
-            break;
-          default:
-            this.apiError = `${error.statusCode} Error: ${error.message}`;
-        }
-      } else {
-        this.apiError = 'No data returned from API';
-      }
+      // Use the processError function from setup
+      this.processError(error);
     }
   },
 
@@ -231,6 +212,8 @@ export default defineNuxtComponent({
             apiError.value = `${error.statusCode} Error: ${error.message}`;
             break;
         }
+      } else {
+        apiError.value = 'No data returned from API';
       }
     }
 
@@ -273,7 +256,8 @@ export default defineNuxtComponent({
       itemName,
       displayName,
       user,
-      processError
+      processError,
+      processErrorMethod: processError
     };
   },
 })
