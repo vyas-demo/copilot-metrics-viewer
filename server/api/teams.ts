@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
       const dataJson = JSON.parse(data);
       logger.info('Using mocked teams data');
       return dataJson;
-    } catch (error) {
+    } catch {
       // If mock data doesn't exist, return empty array
       logger.info('No mock teams data found, returning empty array');
       return [];

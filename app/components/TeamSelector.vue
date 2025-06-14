@@ -48,11 +48,6 @@ interface GitHubTeam {
   description: string | null;
 }
 
-interface TeamOption {
-  name: string;
-  value: string;
-}
-
 const emit = defineEmits<{
   teamSelected: [team: string | null]
 }>();
