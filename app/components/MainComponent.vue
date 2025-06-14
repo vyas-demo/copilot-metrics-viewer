@@ -49,6 +49,15 @@
       </template>
     </AuthState>
 
+    <!-- Team Selector for organization scope -->
+    <ClientOnly>
+      <TeamSelector
+        v-show="config.public.scope === 'organization' && !apiError && !signInRequired"
+        :show="config.public.scope === 'organization' && !apiError && !signInRequired"
+        :current-team="selectedTeamSlug"
+        @team-selected="onTeamSelected"
+      />
+    </ClientOnly>
 
     <div v-show="!apiError">
       <v-progress-linear v-show="!metricsReady" indeterminate color="indigo" />
@@ -87,6 +96,7 @@ import BreakdownComponent from './BreakdownComponent.vue'
 import CopilotChatViewer from './CopilotChatViewer.vue'
 import SeatsAnalysisViewer from './SeatsAnalysisViewer.vue'
 import ApiResponse from './ApiResponse.vue'
+import TeamSelector from './TeamSelector.vue'
 
 export default defineNuxtComponent({
   name: 'MainComponent',
@@ -95,7 +105,8 @@ export default defineNuxtComponent({
     BreakdownComponent,
     CopilotChatViewer,
     SeatsAnalysisViewer,
-    ApiResponse
+    ApiResponse,
+    TeamSelector
   },
   methods: {
     logout() {
@@ -104,13 +115,53 @@ export default defineNuxtComponent({
       this.seats = [];
       // console.log('metrics are now', this.metrics);
       clear();
+    },
+    async onTeamSelected(teamSlug: string | null) {
+      this.selectedTeamSlug = teamSlug;
+      await this.fetchMetricsForTeam(teamSlug);
+    },
+    async fetchMetricsForTeam(teamSlug: string | null) {
+      this.metricsReady = false;
+      this.apiError = undefined;
+
+      try {
+        const url = teamSlug ? `/api/metrics?team=${teamSlug}` : '/api/metrics';
+        const apiResponse = await $fetch(url) as MetricsApiResponse;
+        
+        // Update reactive refs directly
+        this.metrics = apiResponse.metrics || [];
+        this.originalMetrics = apiResponse.usage || [];
+        this.metricsReady = true;
+
+        // Update display name
+        const config = useRuntimeConfig();
+        const displayInfo = {
+          githubOrg: config.public.githubOrg,
+          githubEnt: config.public.githubEnt,
+          githubTeam: teamSlug || '',
+          scope: config.public.scope
+        };
+        this.displayName = getDisplayName(displayInfo);
+
+        // Show a more graceful message for teams with no data
+        if (teamSlug && this.metrics.length === 0 && !this.apiError) {
+          this.apiError = 'No metrics data available for this team. This may occur if the team has fewer than 5 active members or no recent activity.';
+        }
+      } catch (error) {
+        this.processErrorMethod(error as H3Error);
+      }
+    },
+    processErrorMethod(error: H3Error) {
+      // Use the processError function from setup
+      this.processError(error);
     }
   },
 
   data() {
     return {
       tabItems: ['languages', 'editors', 'copilot chat', 'seat analysis', 'api response'],
-      tab: null
+      tab: null,
+      selectedTeamSlug: null as string | null
     }
   },
   created() {
@@ -123,7 +174,7 @@ export default defineNuxtComponent({
     const mockedDataMessage = computed(() => config.public.isDataMocked ? 'Using mock data - see README if unintended' : '');
     const itemName = computed(() => config.public.scope);
     const githubInfo = getDisplayName(config.public)
-    const displayName = computed(() => githubInfo);
+    const displayName = ref(githubInfo);
 
     const metricsReady = ref(false);
     const metrics = ref<Metrics[]>([]);
@@ -161,6 +212,8 @@ export default defineNuxtComponent({
             apiError.value = `${error.statusCode} Error: ${error.message}`;
             break;
         }
+      } else {
+        apiError.value = 'No data returned from API';
       }
     }
 
@@ -202,7 +255,9 @@ export default defineNuxtComponent({
       mockedDataMessage,
       itemName,
       displayName,
-      user
+      user,
+      processError,
+      processErrorMethod: processError
     };
   },
 })
